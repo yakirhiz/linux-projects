@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 	
 	close(file_desc);
 	
-	if (write(1, buf, num_of_bytes) != num_of_bytes) { // MAYBE: Check if equal to num_of_bytes
+	if (write(STDOUT_FILENO, buf, num_of_bytes) != num_of_bytes) {
 		perror("write() failed or partial writing");
 		exit(1);
 	}

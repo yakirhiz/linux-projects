@@ -34,7 +34,7 @@ typedef struct message_slot {
 	int channel_id;
 } Slot;
 
-Channel* channels_lists[256];
+Channel* channels_lists[MAX_SLOTS];
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode,
@@ -111,7 +111,9 @@ static ssize_t device_read( struct file* file,
 	printk("Reading from channel %d", slot->curr_channel->id);
 	
 	for (i = 0; i < slot->curr_channel->msglen; ++i) {
-		put_user(slot->curr_channel->message[i], &buffer[i]); // TODO: Check for error
+		if (put_user(slot->curr_channel->message[i], &buffer[i]) < 0) {
+			return -EFAULT;
+		}
 	}
 	
 	return i; // Returns the number of bytes read
@@ -155,7 +157,9 @@ static ssize_t device_write( struct file*       file,
 	slot->curr_channel->message = kmalloc(length * sizeof(char), GFP_KERNEL);
 	
 	for (i = 0; i < length; ++i) {
-		get_user(slot->curr_channel->message[i], &buffer[i]); // TODO: Check for error
+		if (get_user(slot->curr_channel->message[i], &buffer[i]) < 0) {
+			return -EFAULT;
+		}
 	}
 	
 	slot->curr_channel->msglen = length; // Update message length
@@ -187,49 +191,36 @@ static long device_ioctl( struct   file* file,
 	iter = channels_lists[minor];
 	prev = NULL;
 	
-	if (iter == NULL) { // The list is empty
-		iter = kmalloc(sizeof(Channel), GFP_KERNEL);
-		if (iter == NULL) {
-			printk("kalloc() failed");
-			return -ENOMEM;
+	while (iter != NULL) {
+		if (iter->id == ioctl_param) {
+			slot->curr_channel = iter;
+			
+			return SUCCESS;
+		} else {
+			prev = iter;
+			iter = iter->next;
 		}
-		
-		iter->id = ioctl_param;
-		iter->message = NULL; // NEW
-		iter->msglen = 0;
-		iter->next = NULL;
-		
-		slot->curr_channel = iter;
-		
-		channels_lists[minor] = iter;
-	} else { // The list is not empty
-		while (iter != NULL) {
-			if (iter->id == ioctl_param) {
-				slot->curr_channel = iter;
-				
-				return SUCCESS;
-			} else {
-				prev = iter;
-				iter = iter->next;
-			}
-		}
-		
-		// Add new channel
-		new = kmalloc(sizeof(Channel), GFP_KERNEL);
-		if (new == NULL) {
-			printk("kalloc() failed");
-			return -ENOMEM;
-		}
-		
-		new->id = ioctl_param;
-		new->message = NULL; // NEW
-		new->msglen = 0;
-		new->next = NULL;
-		
-		prev->next = new;
-		
-		slot->curr_channel = new;
 	}
+	
+	// Add new channel
+	new = kmalloc(sizeof(Channel), GFP_KERNEL);
+	if (new == NULL) {
+		printk("kalloc() failed");
+		return -ENOMEM;
+	}
+	
+	new->id = ioctl_param;
+	new->message = NULL; // NEW
+	new->msglen = 0;
+	new->next = NULL;
+	
+	if (prev == NULL) {
+		channels_lists[minor] = new;
+	} else {
+		prev->next = new;
+	}
+	
+	slot->curr_channel = new;
 
 	return SUCCESS;
 }
@@ -263,7 +254,7 @@ static int __init simple_init(void)
 		return rc;
 	}
 	
-	for (i =0; i < 256; ++i) {
+	for (i =0; i < MAX_SLOTS; ++i) {
 		channels_lists[i] = NULL;
 	}
 
@@ -282,7 +273,7 @@ static void __exit simple_cleanup(void)
 	Channel *iter, *prev;
 	
 	// Kfree'ing all lists in channels_lists
-	for(i = 0; i < 256; ++i){
+	for(i = 0; i < MAX_SLOTS; ++i){
 		iter = channels_lists[i];
 		
 		// Kfree'ing all the channels in channels_lists[i] linked-list

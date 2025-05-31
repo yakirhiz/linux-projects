@@ -11,4 +11,6 @@
 #define BUF_LEN 128
 #define SUCCESS 0
 
+#define MAX_SLOTS 256
+
 #endif /* MSG_SLT_H */
