@@ -34,7 +34,7 @@ typedef struct message_slot {
 	int channel_id;
 } Slot;
 
-Channel* channels_lists[MAX_SLOTS];
+static Channel* channels_lists[MAX_SLOTS]; // Initialized by the kernel
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode,
@@ -46,7 +46,7 @@ static int device_open( struct inode* inode,
 	
 	slot = kmalloc(sizeof(Slot), GFP_KERNEL);
 	if (slot == NULL) {
-		printk("kalloc() failed");
+		printk("kmalloc() failed");
 		return -ENOMEM;
 	}
 		
@@ -95,7 +95,7 @@ static ssize_t device_read( struct file* file,
 	slot = (Slot*) file->private_data;
 	
 	if (slot->curr_channel == NULL) {
-		printk("Channel haven't been set");
+		printk("Channel has not been set");
 		return -EINVAL;
 	}
 	
@@ -144,7 +144,7 @@ static ssize_t device_write( struct file*       file,
 	slot = (Slot*) file->private_data;
 	
 	if (slot->curr_channel == NULL) {
-		printk("Channel haven't been set");
+		printk("Channel has not been set");
 		return -EINVAL;
 	}
 	
@@ -155,6 +155,10 @@ static ssize_t device_write( struct file*       file,
 	
 	// Allocating memory for the new message
 	slot->curr_channel->message = kmalloc(length * sizeof(char), GFP_KERNEL);
+	if (slot->curr_channel->message == NULL) {
+		printk("kmalloc() failed\n");
+		return -ENOMEM;
+	}
 	
 	for (i = 0; i < length; ++i) {
 		if (get_user(slot->curr_channel->message[i], &buffer[i]) < 0) {
@@ -176,7 +180,7 @@ static long device_ioctl( struct   file* file,
 	int minor;
 	Channel *iter, *prev, *new;
 	
-	printk("Invoking ioctl()\n");
+	printk("Invoking device_ioctl()\n");
 	
 	if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0) {
 		return -EINVAL;
@@ -205,7 +209,7 @@ static long device_ioctl( struct   file* file,
 	// Add new channel
 	new = kmalloc(sizeof(Channel), GFP_KERNEL);
 	if (new == NULL) {
-		printk("kalloc() failed");
+		printk("kmalloc() failed");
 		return -ENOMEM;
 	}
 	
@@ -252,10 +256,6 @@ static int __init simple_init(void)
 	{
 		printk(KERN_ERR "Registraion failed for %d\n", MAJOR_NUM);
 		return rc;
-	}
-	
-	for (i =0; i < MAX_SLOTS; ++i) {
-		channels_lists[i] = NULL;
 	}
 
 	printk("Registeration is successful.\n");
