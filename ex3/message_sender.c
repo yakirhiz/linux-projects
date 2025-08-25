@@ -21,9 +21,7 @@ int main(int argc, char** argv)
 	int msglen = strlen(message);
 	
 	int file_desc = open(file_path, O_WRONLY);
-	if(file_desc < 0) 
-	{
-		// printf("Can't open device file: %s\n", DEVICE_FILE_NAME);
+	if(file_desc < 0) {
 		perror("open() failed");
 		exit(1);
 	}

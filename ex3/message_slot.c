@@ -23,8 +23,8 @@ MODULE_LICENSE("GPL");
 typedef struct channel {
 	int id;
 	// DEL: char message[BUF_LEN];
-	char *message; // Null indicate that there is no message
-	int msglen; // Zero indicate that there is no message
+	char *message; // NULL indicates no message
+	int msglen; // 0 indicates no message
 	struct channel *next;
 } Channel;
 
@@ -83,6 +83,7 @@ static ssize_t device_read( struct file* file,
                             loff_t*      offset )
 {
 	Slot *slot;
+	Channel *channel;
 	int i;
 	
 	printk("Invocing device_read()\n");
@@ -98,20 +99,22 @@ static ssize_t device_read( struct file* file,
 		printk("Channel has not been set");
 		return -EINVAL;
 	}
+
+	channel = slot->curr_channel;
 	
-	if (length < slot->curr_channel->msglen) {
+	if (length < channel->msglen) {
 		printk("Buffer is too small.");
 		return -ENOSPC;
 	}
 	
-	if (slot->curr_channel->msglen == 0) { // MAYBE: message == NULL
+	if (channel->msglen == 0) { // MAYBE: message == NULL
 		return -EWOULDBLOCK;
 	}
 	
-	printk("Reading from channel %d", slot->curr_channel->id);
+	printk("Reading from channel %d", channel->id);
 	
-	for (i = 0; i < slot->curr_channel->msglen; ++i) {
-		if (put_user(slot->curr_channel->message[i], &buffer[i]) < 0) {
+	for (i = 0; i < channel->msglen; ++i) {
+		if (put_user(channel->message[i], &buffer[i]) < 0) {
 			return -EFAULT;
 		}
 	}
@@ -128,6 +131,7 @@ static ssize_t device_write( struct file*       file,
                              loff_t*            offset )
 {
 	Slot *slot;
+	Channel *channel;
 	int i;
 	
 	printk("Invoking device_write()\n");
@@ -147,26 +151,28 @@ static ssize_t device_write( struct file*       file,
 		printk("Channel has not been set");
 		return -EINVAL;
 	}
+
+	channel = slot->curr_channel;
 	
-	printk("Writing to channel %d\n", slot->curr_channel->id);
+	printk("Writing to channel %d\n", channel->id);
 	
 	// Kfree'ing old message
-	kfree(slot->curr_channel->message);
+	kfree(channel->message);
 	
 	// Allocating memory for the new message
-	slot->curr_channel->message = kmalloc(length * sizeof(char), GFP_KERNEL);
-	if (slot->curr_channel->message == NULL) {
+	channel->message = kmalloc(length * sizeof(char), GFP_KERNEL);
+	if (channel->message == NULL) {
 		printk("kmalloc() failed\n");
 		return -ENOMEM;
 	}
 	
 	for (i = 0; i < length; ++i) {
-		if (get_user(slot->curr_channel->message[i], &buffer[i]) < 0) {
+		if (get_user(channel->message[i], &buffer[i]) < 0) {
 			return -EFAULT;
 		}
 	}
 	
-	slot->curr_channel->msglen = length; // Update message length
+	channel->msglen = length; // Update message length
 	
 	return i; // Returns the number of bytes written
 }
@@ -214,7 +220,7 @@ static long device_ioctl( struct   file* file,
 	}
 	
 	new->id = ioctl_param;
-	new->message = NULL; // NEW
+	new->message = NULL;
 	new->msglen = 0;
 	new->next = NULL;
 	
@@ -245,9 +251,9 @@ struct file_operations Fops =
 
 //---------------------------------------------------------------
 // Initialize the module - Register the character device
-static int __init simple_init(void)
+static int __init device_init(void)
 {
-	int i, rc = -1;
+	int rc = -1;
 
 	rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops); // Register driver
 
@@ -267,7 +273,7 @@ static int __init simple_init(void)
 }
 
 //---------------------------------------------------------------
-static void __exit simple_cleanup(void)
+static void __exit device_cleanup(void)
 {
 	int i;
 	Channel *iter, *prev;
@@ -291,7 +297,7 @@ static void __exit simple_cleanup(void)
 }
 
 //---------------------------------------------------------------
-module_init(simple_init);
-module_exit(simple_cleanup);
+module_init(device_init);
+module_exit(device_cleanup);
 
 //========================= END OF FILE =========================

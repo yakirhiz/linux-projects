@@ -20,9 +20,7 @@ int main(int argc, char** argv)
 	int channel_id = atoi(argv[2]);
 
 	int file_desc = open(file_path, O_RDONLY);
-	if(file_desc < 0) 
-	{
-		// printf("Can't open device file: %s\n", DEVICE_FILE_NAME);
+	if(file_desc < 0) {
 		perror("open() failed");
 		exit(1);
 	}
