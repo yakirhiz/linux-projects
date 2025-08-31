@@ -132,6 +132,7 @@ static ssize_t device_write( struct file*       file,
 {
 	Slot *slot;
 	Channel *channel;
+	char *new_message;
 	int i;
 	
 	printk("Invoking device_write()\n");
@@ -156,22 +157,24 @@ static ssize_t device_write( struct file*       file,
 	
 	printk("Writing to channel %d\n", channel->id);
 	
-	// Kfree'ing old message
-	kfree(channel->message);
-	
 	// Allocating memory for the new message
-	channel->message = kmalloc(length * sizeof(char), GFP_KERNEL);
-	if (channel->message == NULL) {
+	new_message = kmalloc(length * sizeof(char), GFP_KERNEL);
+	if (new_message == NULL) {
 		printk("kmalloc() failed\n");
 		return -ENOMEM;
 	}
 	
 	for (i = 0; i < length; ++i) {
-		if (get_user(channel->message[i], &buffer[i]) < 0) {
+		if (get_user(new_message[i], &buffer[i]) < 0) {
+			kfree(new_message);
 			return -EFAULT;
 		}
 	}
 	
+	// Kfree'ing old message
+	kfree(channel->message);
+
+	channel->message = new_message;
 	channel->msglen = length; // Update message length
 	
 	return i; // Returns the number of bytes written
