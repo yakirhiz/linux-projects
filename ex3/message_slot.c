@@ -86,7 +86,7 @@ static ssize_t device_read( struct file* file,
 	Channel *channel;
 	int i;
 	
-	printk("Invocing device_read()\n");
+	printk("Invoking device_read()\n");
 	
 	// Checking the validity of user space buffer.
 	if (buffer == NULL) {
@@ -123,7 +123,7 @@ static ssize_t device_read( struct file* file,
 }
 
 //---------------------------------------------------------------
-// a processs which has already opened
+// a process which has already opened
 // the device file attempts to write to it
 static ssize_t device_write( struct file*       file,
                              const char __user* buffer,
@@ -171,7 +171,7 @@ static ssize_t device_write( struct file*       file,
 		}
 	}
 	
-	// Kfree'ing old message
+	// kfree'ing old message
 	kfree(channel->message);
 
 	channel->message = new_message;
@@ -244,12 +244,12 @@ static long device_ioctl( struct   file* file,
 // when a process does something to the device we created
 struct file_operations Fops =
 {
-  .owner	      = THIS_MODULE, 
-  .read           = device_read,
-  .write          = device_write,
-  .open           = device_open,
-  .unlocked_ioctl = device_ioctl,
-  .release        = device_release,
+	.owner          = THIS_MODULE,
+	.read           = device_read,
+	.write          = device_write,
+	.open           = device_open,
+	.unlocked_ioctl = device_ioctl,
+	.release        = device_release,
 };
 
 //---------------------------------------------------------------
@@ -263,11 +263,11 @@ static int __init device_init(void)
 	// Negative values signify an error
 	if (rc < 0)
 	{
-		printk(KERN_ERR "Registraion failed for %d\n", MAJOR_NUM);
+		printk(KERN_ERR "Registration failed for %d\n", MAJOR_NUM);
 		return rc;
 	}
 
-	printk("Registeration is successful.\n");
+	printk("Registration is successful.\n");
 	printk("Create a device file: mknod /dev/%s c %d 0\n", DEVICE_RANGE_NAME, MAJOR_NUM);
 	printk("You can echo/cat to/from the device file.\n");
 	printk("Don't forget to 'rm' the device file and 'rmmod' when you're done.\n");
@@ -281,11 +281,11 @@ static void __exit device_cleanup(void)
 	int i;
 	Channel *iter, *prev;
 	
-	// Kfree'ing all lists in channels_lists
+	// kfree'ing all lists in channels_lists
 	for(i = 0; i < MAX_SLOTS; ++i){
 		iter = channels_lists[i];
 		
-		// Kfree'ing all the channels in channels_lists[i] linked-list
+		// kfree'ing all the channels in channels_lists[i] linked-list
 		while (iter != NULL) {
 			prev = iter;
 			iter = iter->next;
@@ -296,7 +296,7 @@ static void __exit device_cleanup(void)
 	
 	// Unregister the device, should always succeed
 	unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
-	printk("Unregisteration is successful.\n");
+	printk("Unregistration is successful.\n");
 }
 
 //---------------------------------------------------------------

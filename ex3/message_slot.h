@@ -12,5 +12,6 @@
 #define SUCCESS 0
 
 #define MAX_SLOTS 256
+#define MAX_CHANNELS (1UL << 20)  /* 1M (1,048,576) channels per slot */
 
 #endif /* MSG_SLT_H */
