@@ -7,16 +7,16 @@
 #include <fcntl.h>
 #include <signal.h>
 
-static void error(); // Print errors to stderr.
+static void error(const char *msg); // Print errors to stderr.
 static int regular(char **arglist); // Execture regular command.
 static int background(int count, char **arglist); // Execture background command.
 static int pipe_process(int count, int separator, char **arglist); // Execture commands with pipe.
 static int redirect(int count, int separator, char **arglist); // Execture command with redirect of output.
-void restore_default_handler(); // Restore the SIGINT handler to the default.
-void handler_chld(int pid); // Handler for SIGCHLD signal in the main shell.
+static void restore_default_handler(); // Restore the SIGINT handler to the default.
+static void handler_chld(int signo); // Handler for SIGCHLD signal in the main shell.
 
 
-void handler_chld(int pid) {
+static void handler_chld(int signo) {
 	int ret;
 	
 	// Wait for all the processes that was finished.
@@ -30,7 +30,7 @@ void handler_chld(int pid) {
 	}
 }
 
-void restore_default_handler() {
+static void restore_default_handler() {
 	struct sigaction sa;
 	sa.sa_handler = SIG_DFL;
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
@@ -247,6 +247,6 @@ static int regular(char **arglist) {
 	return 1;
 }
 
-static void error(char* msg) {
-	fprintf(stderr, "ERROR OCCURRED! %s\n", msg);
+static void error(const char* msg) {
+	fprintf(stderr, "ERROR: %s\n", msg);
 }
