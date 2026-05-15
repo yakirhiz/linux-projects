@@ -8,10 +8,10 @@
 #include <signal.h>
 
 static void error(const char *msg); // Print errors to stderr.
-static int regular(char **arglist); // Execture regular command.
-static int background(int count, char **arglist); // Execture background command.
-static int pipe_process(int count, int separator, char **arglist); // Execture commands with pipe.
-static int redirect(int count, int separator, char **arglist); // Execture command with redirect of output.
+static int regular(char **arglist); // Execute regular command.
+static int background(int count, char **arglist); // Execute background command.
+static int pipe_process(int count, int separator, char **arglist); // Execute commands with pipe.
+static int redirect(int count, int separator, char **arglist); // Execute command with redirect of output.
 static void restore_default_handler(); // Restore the SIGINT handler to the default.
 static void handler_chld(int signo); // Handler for SIGCHLD signal in the main shell.
 
@@ -104,6 +104,7 @@ static int redirect(int count, int separator, char **arglist) {
 		// Open the file (where the output goes) for writing and truncate it, create if needed
 		int fd = open(arglist[count - 1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if(fd == -1) {
+			error("Error while executing open().");
 			exit(1); 
 		}
 		
@@ -121,7 +122,7 @@ static int redirect(int count, int separator, char **arglist) {
 	
 	// Wait fot process to finish
 	if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD) {
-		error("While trying to wait().");
+		error("Error while executing waitpid().");
 		return 0;
 	}
 	
@@ -134,7 +135,7 @@ static int pipe_process(int count, int separator, char **arglist) {
 	// Create two-sided pipe side per process.
 	if (pipe(pfds) == -1) {
 		error("Error while executing pipe().");
-		return 1;
+		return 0;
 	}
 	
 	int reader = pfds[0];
