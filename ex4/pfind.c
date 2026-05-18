@@ -25,9 +25,11 @@ typedef struct Directory {
 	struct Directory* next;
 } Directory;
 
-struct Queue {
+typedef struct Queue {
 	Directory *head, *tail;
-} queue;
+} Queue;
+
+Queue queue;
 
 char* term;
 atomic_int num_threads;
@@ -75,7 +77,7 @@ int main(int argc, char** argv) {
 	
 	for (long i = 0; i < num_threads; ++i) {
 		if (pthread_create(&threads[i], NULL, &searching_thread, (void*) NULL) != 0) {
-			perror("Thread creation failed\n");
+			perror("pthread_create() failed\n");
 			exit(FAILURE);
 		}
 	}
@@ -155,7 +157,7 @@ void search_dir(char* path) {
 		if (entry->d_type == DT_DIR) {
 			if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
 				
-			} else if (!is_searchable(entry->d_name)) {
+			} else if (!is_searchable(fullpath)) {
 				printf("Directory %s: Permission denied.\n", fullpath);
 			} else {
 				q_insert_last(fullpath);
@@ -220,15 +222,14 @@ void q_remove_head(char* path) {
 		--num_threads_waiting;
 	}
 	
-	if (queue.head != NULL && queue.head->path != NULL) {
-		strcpy(path, queue.head->path);
-			
-		queue.head = queue.head->next;
-		
-		if(queue.head == NULL) { // Didn't free previous head
-			queue.tail = NULL;
-		}
+	Directory* directory = queue.head;
+	queue.head = directory->next;		
+	if(queue.head == NULL) {
+		queue.tail = NULL;
 	}
+
+	strcpy(path, directory->path);
+	free(directory);
 
 	pthread_mutex_unlock(&queue_mutex);
 }
